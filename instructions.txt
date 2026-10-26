@@ -1,0 +1,160 @@
+# --- Web framework ---
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-multipart==0.0.19
+aiofiles==24.1.0
+
+# --- Data ---
+pydantic==2.10.3
+pydantic-settings==2.6.1
+sqlalchemy==2.0.36
+psycopg2-binary==2.9.10
+
+# --- Queue / workers / resources ---
+celery==5.4.0
+redis==5.2.0
+psutil==6.1.0
+
+# --- Imaging / OCR (engine-agnostic) ---
+numpy==1.26.4
+opencv-python-headless==4.10.0.84
+Pillow==11.0.0
+PyMuPDF==1.24.14
+pytesseract==0.3.13
+langdetect==1.0.9
+
+# --- OCR engines (framework packages; compute backend comes from cpu.txt / gpu.txt) ---
+easyocr==1.7.2
+# PaddleOCR master framework; the paddlepaddle compute backend is pinned in
+# cpu.txt/gpu.txt like torch. mkldnn stays disabled at runtime (3.3.x PIR bug).
+paddleocr==3.7.0
+
+# --- QARI-OCR (Qwen2-VL-2B-Instruct Arabic OCR; local weights only) ---
+# Pinned to the versions validated against torch 2.5.1 (see docs/REVIEWER_RESPONSE.md)
+transformers==4.57.6
+peft==0.21.0
+accelerate==1.15.0
+qwen-vl-utils==0.0.14
+
+# --- Security ---
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+# Active Directory login / user search (pure Python, no system libs)
+ldap3==2.9.1
+# Windows SSO (Kerberos/SPNEGO). Windows uses SSPI; Linux pulls gssapi + krb5
+# (built against libkrb5-dev, see Dockerfile) and reads the keytab in KRB5_KTNAME.
+pyspnego[kerberos]==0.11.2
+
+
+
+# CPU-only compute backends. Tested together on Python 3.11.
+# PyTorch CPU wheels come from the official PyTorch index → no CUDA packages,
+# identical behaviour in development and production.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.5.1
+torchvision==0.20.1
+# PaddleOCR's compute backend. The PyPI "paddlepaddle" wheel is the CPU-only
+# build (paddlepaddle-gpu is a separate package and never installed here, so no
+# CUDA exists on this platform). GPU profiles could add it via gpu.txt.
+paddlepaddle==3.3.1
+
+
+pytest==8.3.4
+httpx==0.28.1
+
+
+
+
+
+sudo dnf install python3 python3-pip python3-devel
+
+
+sudo add-apt-repository ppa:deadsnakes/ppa
+
+
+sudo dnf install nginx
+sudo systemctl start nginx
+sudo systemctl enable nginx
+
+sudo mkdir -p /var/www/myproject
+sudo chown -R $USER:$USER /var/www/myproject
+
+to activate
+source .venv/bin/activate
+
+ls /usr/bin/python3*
+
+cd /opt/ocr_api
+rm -rf .venv                 # remove the old 3.9 venv
+python3.11 -m venv .venv
+
+source .venv/bin/activate
+python --version             # → Python 3.11.x
+
+
+
+dnf install -y krb5-devel krb5-workstation gcc gcc-c++ make python3.11-devel
+krb5-config --version
+
+
+
+swapoff /swapfile
+rm /swapfile
+fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+
+
+pip install --no-cache-dir -r base.txt -r cpu.txt
+
+
+pip install gunicorn flask
+
+
+dnf install -y krb5-devel krb5-workstation gcc gcc-c++ make python3.11-devel
+
+
+dnf install -y unzip
+pip install -r base.txt
+
+
+dnf install -y mesa-libGL glib2 libgomp
+
+
+to setup firewall
+=================================
+setsebool -P httpd_can_network_connect 1
+firewall-cmd --permanent --add-service=http
+firewall-cmd --reload
+nginx -t
+systemctl enable --now nginx
+systemctl reload nginx
+=================================
+
+
+
+
+
+ExecStart=/opt/ocr_api/ocr_api/mvenv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --root-path /ocr_api
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 --root-path /ocr_api
+
+
+
+
+Important
+===========================
+/etc/systemd/system/ocr-api.service
+
+[Unit]
+Description=OCR API
+After=network.target postgresql.service redis.service
+
+[Service]
+WorkingDirectory=/opt/ocr_api/ocr_api
+ExecStart=/opt/ocr_api/ocr_api/mvenv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --root-path /ocr_api
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
+
+
+
