@@ -1,0 +1,13 @@
+
+lspci | grep -i nvidia
+
+sudo ubuntu-drivers install
+
+sudo reboot
+
+sudo apt update
+sudo apt install nvidia-driver-550 nvidia-utils-550
+
+sudo reboot
+
+192.168.70.139
